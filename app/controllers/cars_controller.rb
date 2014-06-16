@@ -13,7 +13,14 @@ class CarsController < ActionController::Base
 
   def create
     car_params = JSON.parse(request.body.read)
-    @car = Car.create!(car_params)
-    render 'show', :status => 201
+    token = request.headers["HTTP_AUTHORIZATION"]
+    user = User.find_by(api_authentication_token: token)
+    @car = Car.new(car_params)
+    if user
+      @car.save!
+      render 'show', :status => 201
+    else
+      render :status => 401, :json => {}
+    end
   end
 end

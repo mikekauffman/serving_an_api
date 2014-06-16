@@ -96,7 +96,9 @@ describe 'Car API' do
         "purchased_on" => "1973-10-04"
       }.to_json
 
-      expect{post '/cars', body, {'Accept' => 'application/json'}}.to change{Car.count}.by 1
+      user = create_user
+
+      expect{post '/cars', body, {'Accept' => 'application/json', 'Authorization' => user.api_authentication_token}}.to change{Car.count}.by 1
 
       car = Car.last
 
@@ -117,6 +119,34 @@ describe 'Car API' do
       expect(response.code.to_i).to eq 201
       expect(JSON.parse(response.body)).to eq expected
 
+    end
+
+    it 'an error is returned when a post is made without an authentication token' do
+      body = {
+        "make_id" => @ford.id,
+        "color" => "red",
+        "doors" => 4,
+        "purchased_on" => "1973-10-04"
+      }.to_json
+
+      expect{post '/cars', body, {'Accept' => 'application/json'}}.to change{Car.count}.by 0
+      expect(response.code.to_i).to eq 401
+      expect(JSON.parse(response.body)).to eq({})
+    end
+
+    it 'returns an error if the authentication token is invalid' do
+      create_user
+
+      body = {
+        "make_id" => @ford.id,
+        "color" => "red",
+        "doors" => 4,
+        "purchased_on" => "1973-10-04"
+      }.to_json
+
+      expect{post '/cars', body, {'Accept' => 'application/json', 'Authorization' => '12i376124876'}}.to change{Car.count}.by 0
+      expect(response.code.to_i).to eq 401
+      expect(JSON.parse(response.body)).to eq({})
     end
   end
 end
