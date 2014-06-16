@@ -86,4 +86,37 @@ describe 'Car API' do
       expect(JSON.parse(response.body)).to eq({})
     end
   end
+
+  describe 'post /cars' do
+    it 'allows a user to create a car' do
+      body = {
+        "make_id" => @ford.id,
+        "color" => "red",
+        "doors" => 4,
+        "purchased_on" => "1973-10-04"
+      }.to_json
+
+      expect{post '/cars', body, {'Accept' => 'application/json'}}.to change{Car.count}.by 1
+
+      car = Car.last
+
+      expected = {
+        "_links" => {
+          "self" => {
+            "href" => "/cars/#{car.id}"
+          },
+          "make" => {
+            "href" => "/makes/#{@ford.id}"
+          }
+        },
+        "id" => car.id,
+        "color" => "red",
+        "doors" => 4,
+        "purchased_on" => "1973-10-04"
+      }
+      expect(response.code.to_i).to eq 201
+      expect(JSON.parse(response.body)).to eq expected
+
+    end
+  end
 end
