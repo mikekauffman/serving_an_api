@@ -1,6 +1,9 @@
 class CarsController < ActionController::Base
   def index
     @cars = Car.all
+    if request.headers["X-Api-Version"] == "v1"
+      render 'v1_index'
+    end
   end
 
   def show
@@ -8,6 +11,9 @@ class CarsController < ActionController::Base
       @car = Car.find(params[:id])
     rescue ActiveRecord::RecordNotFound
       render :status => 404, :json => {}
+    end
+    if request.headers["X-Api-Version"] == "v1"
+      render 'v1_show'
     end
   end
 
@@ -18,7 +24,7 @@ class CarsController < ActionController::Base
     @car = Car.new(car_params)
     if user
       @car.save!
-      render 'show', :status => 201
+      render 'v1_show', :status => 201
     else
       render :status => 401, :json => {}
     end

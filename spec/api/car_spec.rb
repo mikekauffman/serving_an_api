@@ -4,14 +4,14 @@ describe 'Car API' do
 
   before do
     @ford = create_make(name: "Ford")
-    @bronco = create_car(color: "red", doors: 4, purchased_on: "1973-10-04", make_id: @ford.id)
   end
 
   describe 'Get /cars response' do
-    it 'returns a list of cars' do
+    it 'returns a list of cars with version 1' do
+      bronco = create_car(color: "red", doors: 4, purchased_on: "1973-10-04", make_id: @ford.id)
       mustang = create_car(color: "blue", doors: 2, purchased_on: "2012-01-24", make_id: @ford.id)
 
-      get '/cars', {}, {'Accept' => 'application/json'}
+      get '/cars', {}, {'Accept' => 'application/json', 'X-Api-Version' => 'v1'}
 
       expected = {
         "_links" => {
@@ -24,13 +24,13 @@ describe 'Car API' do
             {
               "_links" => {
                 "self" => {
-                  "href" => "/cars/#{@bronco.id}"
+                  "href" => "/cars/#{bronco.id}"
                 },
                 "make" => {
                   "href" => "/makes/#{@ford.id}"
                 }
               },
-              "id" => @bronco.id,
+              "id" => bronco.id,
               "color" => "red",
               "doors" => 4,
               "purchased_on" => "1973-10-04"
@@ -55,24 +55,93 @@ describe 'Car API' do
       expect(response.code.to_i).to eq 200
       expect(JSON.parse(response.body)).to eq expected
     end
-  end
 
-  describe 'get /cars/:id' do
-    it 'returns details about a car' do
-      get "/cars/#{@bronco.id}", {}, {'Accept' => 'application/json'}
+    it 'returns a list of cars with v2' do
+      bronco = create_car(color: "red", purchased_on: "1973-10-04", make_id: @ford.id)
+      mustang = create_car(color: "blue", purchased_on: "2012-01-24", make_id: @ford.id)
+
+      get '/cars', {}, {'Accept' => 'application/json'}
 
       expected = {
         "_links" => {
           "self" => {
-            "href" => "/cars/#{@bronco.id}"
+            "href" => "/cars"
+          }
+        },
+        "_embedded" => {
+          "cars" => [
+            {
+              "_links" => {
+                "self" => {
+                  "href" => "/cars/#{bronco.id}"
+                },
+                "make" => {
+                  "href" => "/makes/#{@ford.id}"
+                }
+              },
+              "id" => bronco.id,
+              "color" => "red",
+              "purchased_on" => "1973-10-04"
+            },
+            {
+              "_links" => {
+                "self" => {
+                  "href" => "/cars/#{mustang.id}"
+                },
+                "make" => {
+                  "href" => "/makes/#{@ford.id}"
+                }
+              },
+              "id" => mustang.id,
+              "color" => "blue",
+              "purchased_on" => "2012-01-24"
+            }
+          ]
+        }
+      }
+      expect(response.code.to_i).to eq 200
+      expect(JSON.parse(response.body)).to eq expected
+    end
+  end
+
+  describe 'get /cars/:id' do
+    it 'returns details about a car with the v1 api' do
+      bronco = create_car(color: "red", doors: 4, purchased_on: "1973-10-04", make_id: @ford.id)
+      get "/cars/#{bronco.id}", {}, {'Accept' => 'application/json', 'X-Api-Version' => 'v1'}
+
+      expected = {
+        "_links" => {
+          "self" => {
+            "href" => "/cars/#{bronco.id}"
           },
           "make" => {
             "href" => "/makes/#{@ford.id}"
           }
         },
-        "id" => @bronco.id,
+        "id" => bronco.id,
         "color" => "red",
         "doors" => 4,
+        "purchased_on" => "1973-10-04"
+      }
+      expect(response.code.to_i).to eq 200
+      expect(JSON.parse(response.body)).to eq expected
+    end
+
+    it 'returns details about a car with the v2 api' do
+      bronco = create_car(color: "red", purchased_on: "1973-10-04", make_id: @ford.id)
+      get "/cars/#{bronco.id}", {}, {'Accept' => 'application/json'}
+
+      expected = {
+        "_links" => {
+          "self" => {
+            "href" => "/cars/#{bronco.id}"
+          },
+          "make" => {
+            "href" => "/makes/#{@ford.id}"
+          }
+        },
+        "id" => bronco.id,
+        "color" => "red",
         "purchased_on" => "1973-10-04"
       }
       expect(response.code.to_i).to eq 200
@@ -98,7 +167,7 @@ describe 'Car API' do
 
       user = create_user
 
-      expect{post '/cars', body, {'Accept' => 'application/json', 'Authorization' => user.api_authentication_token}}.to change{Car.count}.by 1
+      expect { post '/cars', body, {'Accept' => 'application/json', 'Authorization' => user.api_authentication_token} }.to change { Car.count }.by 1
 
       car = Car.last
 
@@ -129,7 +198,7 @@ describe 'Car API' do
         "purchased_on" => "1973-10-04"
       }.to_json
 
-      expect{post '/cars', body, {'Accept' => 'application/json'}}.to change{Car.count}.by 0
+      expect { post '/cars', body, {'Accept' => 'application/json'} }.to change { Car.count }.by 0
       expect(response.code.to_i).to eq 401
       expect(JSON.parse(response.body)).to eq({})
     end
@@ -144,9 +213,10 @@ describe 'Car API' do
         "purchased_on" => "1973-10-04"
       }.to_json
 
-      expect{post '/cars', body, {'Accept' => 'application/json', 'Authorization' => '12i376124876'}}.to change{Car.count}.by 0
+      expect { post '/cars', body, {'Accept' => 'application/json', 'Authorization' => '12i376124876'} }.to change { Car.count }.by 0
       expect(response.code.to_i).to eq 401
       expect(JSON.parse(response.body)).to eq({})
     end
   end
+
 end
