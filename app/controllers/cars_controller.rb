@@ -23,8 +23,17 @@ class CarsController < ActionController::Base
     user = User.find_by(api_authentication_token: token)
     @car = Car.new(car_params)
     if user
-      @car.save!
-      render 'v1_show', :status => 201
+      if request.headers["X-Api-Version"] == "v1"
+        @car.save!
+        render 'v1_show', :status => 201
+      else
+        if car_params["doors"]
+          render :status => 401, :json => {}
+        else
+          @car.save!
+          render 'show', :status => 201
+        end
+      end
     else
       render :status => 401, :json => {}
     end

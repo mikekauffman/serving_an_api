@@ -157,11 +157,42 @@ describe 'Car API' do
   end
 
   describe 'post /cars' do
-    it 'allows a user to create a car' do
+    it 'allows a user to create a car with the v1 api' do
       body = {
         "make_id" => @ford.id,
         "color" => "red",
         "doors" => 4,
+        "purchased_on" => "1973-10-04"
+      }.to_json
+
+      user = create_user
+
+      expect { post '/cars', body, {'Accept' => 'application/json', 'Authorization' => user.api_authentication_token, 'X-Api-Version' => 'v1'} }.to change { Car.count }.by 1
+
+      car = Car.last
+
+      expected = {
+        "_links" => {
+          "self" => {
+            "href" => "/cars/#{car.id}"
+          },
+          "make" => {
+            "href" => "/makes/#{@ford.id}"
+          }
+        },
+        "id" => car.id,
+        "color" => "red",
+        "doors" => 4,
+        "purchased_on" => "1973-10-04"
+      }
+      expect(response.code.to_i).to eq 201
+      expect(JSON.parse(response.body)).to eq expected
+    end
+
+    it 'allows a user to create a car with the v2 api' do
+      body = {
+        "make_id" => @ford.id,
+        "color" => "red",
         "purchased_on" => "1973-10-04"
       }.to_json
 
@@ -182,12 +213,29 @@ describe 'Car API' do
         },
         "id" => car.id,
         "color" => "red",
-        "doors" => 4,
         "purchased_on" => "1973-10-04"
       }
       expect(response.code.to_i).to eq 201
       expect(JSON.parse(response.body)).to eq expected
+    end
 
+    it 'does not allow a car with doors if it is posted using the v2 api' do
+      body = {
+        "make_id" => @ford.id,
+        "color" => "red",
+        "doors" => 4,
+        "purchased_on" => "1973-10-04"
+      }.to_json
+
+      user = create_user
+
+      expect { post '/cars', body, {'Accept' => 'application/json', 'Authorization' => user.api_authentication_token} }.to change { Car.count }.by 0
+
+      car = Car.last
+
+      expected = {}
+      expect(response.code.to_i).to eq 401
+      expect(JSON.parse(response.body)).to eq expected
     end
 
     it 'an error is returned when a post is made without an authentication token' do
